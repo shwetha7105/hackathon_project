@@ -29,7 +29,7 @@ def init_tables():
     if cursor.fetchone()[0] == 0:
         categories = [('Food',), ('Transport',), ('Shopping',), ('Bills',), ('Entertainment',)]
         cursor.executemany("INSERT INTO categories (category_name) VALUES (?)", categories)
-        st.success("✅ Added sample categories!")
+        st.success("Added sample categories!")
     
     conn.commit()
     conn.close()
@@ -37,7 +37,7 @@ def init_tables():
 init_tables()
 
 st.write("BUDGET")
-st.text_input("MonthlyIncome")
+st.text_input("Monthly Income")
 st.text_input("Monthly Budget")
 st.button("Fix Budget")
 

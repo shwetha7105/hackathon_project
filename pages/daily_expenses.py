@@ -1,88 +1,42 @@
 import streamlit as st
-import sqlite3
-from datetime import date
+import sys
+import os
 
-st.set_page_config(page_title="Daily Expenses", layout="centered")
+# 1. HARDCODED path to your hackathon project root
+# This tells Python EXACTLY where to look on your laptop
+hackathon_root = r"C:\Users\91979\OneDrive\Desktop\hackathon\hackathon_project"
 
-st.title("Record Daily Expense")
+if hackathon_root not in sys.path:
+    sys.path.insert(0, hackathon_root)
 
-# ----------------------------
-# Database Connection
-# ----------------------------
-def get_connection():
-    return sqlite3.connect("finance.db")
+# 2. Try the import again
+try:
+    import expenses_db
+    # We call it using the module name to be 100% safe
+    expenses_db.init_db()
+    
+    # Alias the functions so your existing code doesn't break
+    insert_expense = expenses_db.insert_expense
+    get_categories = expenses_db.get_categories
+    init_db = expenses_db.init_db
+    
+    st.success("Database connected successfully!")
+except Exception as e:
+    st.error(f"Critical Error: Could not find expenses_db.py in {hackathon_root}")
+    st.info("Make sure the file 'expenses_db.py' is sitting directly in the 'hackathon_project' folder.")
+    st.stop() # Stop the app here so we don't get the NameError below
 
-def get_categories():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, category_name FROM categories")
-    data = cursor.fetchall()
-    conn.close()
-    return data
+st.title("Daily Expenses")
 
-def insert_expense(amount, category_id, expense_date, note):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO expenses (amount, category_id, date, note)
-        VALUES (?, ?, ?, ?)
-    """, (amount, category_id, expense_date, note))
-    conn.commit()
-    conn.close()
+# Example Usage
+categories = get_categories()
+cat_options = {name: id for id, name in categories}
+selected_cat_name = st.selectbox("Category", options=list(cat_options.keys()))
 
-# ----------------------------
-# Expense Form UI
-# ----------------------------
+amount = st.number_input("Amount", min_value=0.0)
+note = st.text_input("Note")
+expense_date = st.date_input("Date")
 
-with st.form("expense_form"):
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        amount = st.number_input("Enter Amount (₹)", min_value=0.0, step=1.0)
-
-    with col2:
-        expense_date = st.date_input("Select Date", value=date.today())
-
-    categories = get_categories()
-
-    if categories:
-        category_dict = {name: id for id, name in categories}
-        selected_category = st.selectbox("Select Category", list(category_dict.keys()))
-    else:
-        st.warning("No categories found. Please add categories first.")
-        selected_category = None
-
-    note = st.text_area("Add Note (Optional)")
-
-    submit = st.form_submit_button("Add Expense")
-
-# ----------------------------
-# Submit Logic
-# ----------------------------
-
-if submit:
-    if amount > 0 and selected_category:
-        insert_expense(
-            amount,
-            category_dict[selected_category],
-            expense_date.strftime("%Y-%m-%d"),
-            note
-        )
-        st.success("✅ Expense Recorded Successfully!")
-    else:
-        st.error("Please enter valid details.")
-
-        """
-        reqired tables:
-
-        
-        CREATE TABLE IF NOT EXISTS expenses (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    amount REAL,
-    category_id INTEGER,
-    date TEXT,
-    note TEXT,
-    FOREIGN KEY (category_id) REFERENCES categories(id)
-);
-        """
+if st.button("Add Expense"):
+    insert_expense(amount, cat_options[selected_cat_name], str(expense_date), note)
+    st.success("Expense added!")
